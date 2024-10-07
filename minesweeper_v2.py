@@ -1,7 +1,6 @@
 from collections import deque
 import numpy as np
 from termcolor import colored
-import torch
 
 REVEALED = 0
 COVERED = -1
@@ -14,12 +13,16 @@ class Minesweeper():
 
         #Game Data
         self.num_of_rows, self.num_of_cols = rows, columns
-        self.num_of_mines, self.num_of_flags, self.num_of_remains = mines, 0, self.num_of_rows * self.num_of_cols
+        self.num_of_mines = mines
+        self.newGame()
+        
+    def newGame(self):
+        self.num_of_flags, self.num_of_remains = 0, self.num_of_rows * self.num_of_cols
         self.status = 0 # Win: 1, In game: 0, Loss: -1
 
         #Training Data
         self.num_of_clicks = 0
-        self.num_of_mine_remains = mines
+        self.num_of_mine_remains = self.num_of_mines
 
         self.map = self._init_map()
         self.mask = np.full_like(self.map, -1, dtype=int) # FLAGGED: -2, COVERED: -1, KNOWN: 0
@@ -28,6 +31,7 @@ class Minesweeper():
         self.is3BV = np.zeros((self.num_of_rows,self.num_of_cols),dtype=bool)
         self.cleared3BV = 0
         self._3BV = self._get_3BV()
+        
         
     def _get_adjacent_cell(self, row: int, col: int):
         for r in range(max(row - 1, 0), min(self.num_of_rows, row + 2)):

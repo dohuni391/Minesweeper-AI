@@ -21,7 +21,7 @@ class DDQNAgent():
         self.qnetwork_local = DDQN(state_size, action_size)
         self.qnetwork_target = DDQN(state_size, action_size)
         self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=learning_rate, weight_decay=1e-5)
-        self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size = 1000, gamma = 0.8)
+        self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size = 500, gamma = 0.8)
         self.replay_buffer = ReplayBuffer(capacity)
         self.qnetwork_target.load_state_dict(self.qnetwork_local.state_dict())
 

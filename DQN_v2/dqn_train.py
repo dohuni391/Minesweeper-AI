@@ -1,42 +1,50 @@
-from collections import deque
-
+import os, sys
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(CURRENT_DIR))
 import numpy as np
-import torch
 from minesweeper_v2 import Minesweeper
 from dqn_agent import DQNAgent
 
 env = Minesweeper(16, 30, 99)
+agent = DQNAgent(input_shape=env.get_state().shape)
 
-agent = DQNAgent(input_shape=env.get_state().shape, seed=0)
+n_episodes = 10000
+max_steps = env.num_of_rows * env.num_of_cols - env.num_of_mines
 
-def dqn(n_episodes=2000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
-    scores = []                        # list containing scores from each episode
-    scores_window = deque(maxlen=100)  # last 100 scores
-    eps = eps_start                    # initialize epsilon
-    for i_episode in range(1, n_episodes+1):
-        state = env.reset()
-        score = 0
+eps_decay = 0.995
+eps_end = 0
 
-        while True:
-            action = agent.act(state, eps)
-            row = int(action/env.num_of_cols)
-            col = int(action%env.num_of_cols)
-            next_state, reward, done, _ = env.step(action)
-            agent.step(state, action, reward, next_state, done)
-            state = next_state
-            score += reward
-            if done:
-                break 
+total_reward = 0
+rewards_list = []
+win_counts = []
 
-        scores_window.append(score)       # save most recent score
-        scores.append(score)              # save most recent score
-        eps = max(eps_end, eps_decay*eps) # decrease epsilon
-        print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)), end="")
-        if i_episode % 100 == 0:
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
-        if np.mean(scores_window)>=200.0:
-            print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode-100, np.mean(scores_window)))
-            torch.save(agent.qnetwork_local.state_dict(), 'checkpoint.pth')
+model_name = 'dqn_model'
+if os.path.isfile(model_name):
+    agent.load(model_name)
+    print("Loaded model from", model_name)
+
+for i_episode in range(1, n_episodes+1):
+    state = env.newGame()
+
+    for t in range(max_steps):
+        agent.t_step += 1
+        action = agent.act(env, state)
+        next_state, reward, done = env.step(action)
+        agent.step(state, action, reward, next_state, done)
+        state = next_state
+        total_reward += reward
+        if done != 0:
+            if env.status == 1:
+                win_counts.append(1)
+            else:
+                win_counts.append(0)
             break
-    return scores
 
+    rewards_list.append(total_reward)
+    agent.epsilon = max(eps_end, eps_decay * agent.epsilon)
+    if i_episode % 100 == 0:
+        avg_reward = np.mean(rewards_list[-100:])
+        win_percentage = np.sum(win_counts[-100:])
+        print(f'Episode {i_episode}, Average Reward: {avg_reward:.2f}, Win Percentage: {win_percentage:.2f}%')
+    if i_episode % 1000 == 0:
+        agent.save(i_episode)
